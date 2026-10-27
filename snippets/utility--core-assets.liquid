@@ -1,7 +1,8 @@
-{% # Core Assets v1.4.0 %}
+{% # Core Assets v1.5.0 %}
 
 {% comment %}
   Changelog
+  - v1.5.0 — emit the ES module import map ahead of `core.js`'s modulepreload and module script (Shopify: the import map goes before the module scripts that use it). `core.js` now loads last, after the dynamic styles; no change to the CSS order or to the import map's content.
   - v1.4.0 — drop the `.shopify-section--exploration` stylesheet block. Bleed-API decisions landed with the subgrid migration; the 10 `exploration--bleed--*` scaffolds + hub + experimental `exploration-*` blocks + supporting snippets were deleted alongside this edit. `exploration--subgrid.liquid` carries its own self-contained chrome styles.
   - v1.3.0 — drop `display: block` from the `.shopify-section--exploration token-section` exploration-scaffold override. Override defeated the substrate's bleed grid post-subgrid-migration, leaving bleed modifiers on experimental blocks (now stripped of internal bleed CSS) with nothing to gate — bleed cases rendered as plain block flow on individual `exploration--bleed--*` pages. Keep `padding-block` (block-direction; doesn't conflict with grid).
   - v1.2.0 — split `core.css` into four per-layer files (`layer-base.css`, `layer-reset.css`, `layer-theme.css`, `layer-utilities.css`) to circumvent Shopify's 15360-byte `inline_asset_content` cap. Each layer is captured via `utility--inline-asset` and concatenated, then routed through `utility--asset-loader` (mirrors the dynamic-styles pattern). No load-mechanism change — still one inline `<style>` block on first paint.
@@ -12,9 +13,10 @@
 {% doc %}
   @description
   Emits the theme's head assets in order:
-  1. Core layers inline (`layer-base` → `layer-reset` → `layer-theme` → `layer-utilities`, concatenated and minified into one `<style>` block) + `core.js` preloaded as an ES module
+  1. Core layers inline (`layer-base` → `layer-reset` → `layer-theme` → `layer-utilities`, concatenated and minified into one `<style>` block)
   2. Dynamic styles (from `utility--font-face` + `utility--css-variables`) inlined as a second minified block
   3. ES module import map
+  4. `core.js` preloaded as an ES module (after the import map, which must precede every module script that uses it)
 
   Intended to be called once in `layout/theme.liquid` inside <head>. See `.context/docs/asset-loading.md` for the strategy catalog used at each step.
 
@@ -22,7 +24,7 @@
 {% enddoc %}
 
 {% liquid
-  # Primary: per-layer core CSS inline + core.js preload
+  # Primary: per-layer core CSS inline
   capture core_layers
     render 'utility--inline-asset', asset_name: 'layer-base.css'
     render 'utility--inline-asset', asset_name: 'layer-reset.css'
@@ -30,7 +32,6 @@
     render 'utility--inline-asset', asset_name: 'layer-utilities.css'
   endcapture
   render 'utility--asset-loader', css: 'inline', css_content: core_layers, js: false
-  render 'utility--asset-loader', name: 'core', css: false, js: 'preload'
 
   # Secondary: dynamic styles (fonts + CSS variables)
   capture dynamic_style
@@ -39,6 +40,9 @@
   endcapture
   render 'utility--asset-loader', css: 'inline', css_content: dynamic_style, js: false
 
-  # Tertiary: ES module import map
+  # Tertiary: ES module import map, ahead of every module script
   render 'utility--import-map'
+
+  # Quaternary: core.js preload, resolved through the import map
+  render 'utility--asset-loader', name: 'core', css: false, js: 'preload'
 %}
