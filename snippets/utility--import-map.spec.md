@@ -95,7 +95,7 @@ Per `validation-contract.md` Tier 1b (substrate / utility-snippet).
   - Each map entry's URL resolves to the cache-busted `assets/<name>.js` (Shopify's `| asset_url` provides the cache-bust query string)
 - **Edge cases**:
   - One of the referenced JS files missing → import map still emits the entry; the missing file's import (`import … from '@theme/<missing>'`) throws at module-load time in the browser. Out of this utility's scope; the missing-file failure mode lives in the JS module that tried to import.
-  - The import map ships in `<head>` after some module preload tags (per `utility--core-assets`); browsers spec-defined behavior parses the import map before resolving any deferred module imports.
+  - The import map ships in `<head>` ahead of every module preload tag and module script (per `utility--core-assets`, stage 3 before `core.js` in stage 4).
 - **Visual showcase**: DevTools shows the `<script type="importmap">` element with the expected entries; the browser's Network tab shows JS modules loading via the resolved URLs.
 - **Assertions** (prose; Playwright once installed):
   - `document.querySelector('script[type=importmap]')` exists exactly once per page
